@@ -1,0 +1,63 @@
+# ============================================================
+# CodeRAG - Docker Compose 一键部署
+# ============================================================
+# 用法：
+#   1. 复制 .env.example 为 .env，填入 API Key
+#   2. docker compose up -d
+#   3. 访问 http://localhost:3000
+# ============================================================
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: coderag-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:////app/data/app.db
+      - REPO_STORAGE_DIR=/app/repos
+      - CHROMA_PERSIST_DIR=/app/chroma_data
+      - LLM_PROVIDER=${LLM_PROVIDER:-deepseek}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-deepseek}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-deepseek-embedding}
+      - RAG_TOP_K=${RAG_TOP_K:-8}
+    volumes:
+      - coderag-data:/app/data
+      - coderag-repos:/app/repos
+      - coderag-chroma:/app/chroma_data
+    ports:
+      - "8000:8000"
+    networks:
+      - coderag-network
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coderag-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - coderag-network
+
+volumes:
+  coderag-data:
+    name: coderag-data
+  coderag-repos:
+    name: coderag-repos
+  coderag-chroma:
+    name: coderag-chroma
+
+networks:
+  coderag-network:
+    name: coderag-network
+    driver: bridge

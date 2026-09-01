@@ -1,0 +1,85 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===== Node.js / Frontend =====
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# ===== Database =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Chroma 向量库 =====
+**/chroma_db/
+**/.chroma/
+
+# ===== 上传的代码文件 =====
+uploads/
+data/
+repos/
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Logs =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Tests =====
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
