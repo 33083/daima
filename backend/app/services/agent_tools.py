@@ -129,6 +129,7 @@ class CodeAgentTools:
         """
         【工具】查找函数/类定义
         根据符号名（函数名、类名）查找其在代码中的定义位置。
+        如果未找到函数/类定义（可能是变量/常量），会自动回退到全文搜索。
 
         参数:
             symbol_name: 函数名或类名，比如 "get_user"、"UserService"
@@ -172,13 +173,57 @@ class CodeAgentTools:
                 break
 
         if not matches:
-            return f"未找到符号: {symbol_name}"
+            # ===== 代码层自动回退：find_symbol 无结果时，用 search_text 搜同一个名字 =====
+            # 格式设计：正确数据放最前面（以"找到 N 处"开头），解释信息放最后
+            # 目的：LLM 顺序处理文本，开头是"找到"而非"未找到"，大概率直接用数据
+            text_results = self._full_text_search_internal(symbol_name, max_results=10)
+            if text_results:
+                result = f"找到 {len(text_results)} 处匹配:\n\n"
+                for i, m in enumerate(text_results, 1):
+                    result += f"[{i}] {m['file']}:{m['line']} — {m['content']}\n"
+                result += (
+                    f"\n(find_symbol 的 AST 搜索无结果，以上为自动回退的全文搜索结果。"
+                    f"'{symbol_name}' 可能是变量/常量而非函数/类。)"
+                )
+                return result
+            else:
+                return f"未找到 '{symbol_name}'：函数/类定义和全文搜索均无结果。"
 
         result = f"找到 {len(matches)} 个匹配:\n\n"
         for i, m in enumerate(matches, 1):
             result += f"[{i}] {m['file']} (第 {m['line']} 行)\n"
             result += f"```\n{m['snippet'][:300]}\n```\n\n"
         return result
+
+    def _full_text_search_internal(self, keyword: str, max_results: int = 30) -> list:
+        """全文搜索的内部实现，供 find_symbol 回退使用，不额外消耗调用配额"""
+        keyword_lower = keyword.lower()
+        matches = []
+
+        from app.services.code_parser import collect_code_files
+        code_files = collect_code_files(self.repo.local_path)
+
+        for file_path in code_files:
+            rel_path = os.path.relpath(file_path, self.repo.local_path)
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+            except Exception:
+                continue
+
+            for i, line in enumerate(lines):
+                if keyword_lower in line.lower():
+                    matches.append({
+                        "file": rel_path,
+                        "line": i + 1,
+                        "content": line.strip()[:200],
+                    })
+                    if len(matches) >= max_results:
+                        break
+            if len(matches) >= max_results:
+                break
+
+        return matches
 
     def search_text(self, keyword: str) -> str:
         """
@@ -392,7 +437,7 @@ class CodeAgentTools:
                 "type": "function",
                 "function": {
                     "name": "find_symbol",
-                    "description": "根据函数名或类名查找其定义位置。",
+                    "description": "根据函数名或类名查找其定义位置。如果未找到（可能是变量/常量），会自动回退到全文搜索，无需手动换工具。",
                     "parameters": {
                         "type": "object",
                         "properties": {
